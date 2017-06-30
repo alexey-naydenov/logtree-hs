@@ -1,4 +1,4 @@
-module Lib
+module LogTree.Lib
     ( someFunc
     ) where
 

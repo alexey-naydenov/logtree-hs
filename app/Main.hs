@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import qualified LogTree.Lib as LTL
 
 main :: IO ()
-main = someFunc
+main = LTL.someFunc
