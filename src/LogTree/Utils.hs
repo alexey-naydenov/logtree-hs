@@ -1,14 +1,6 @@
-module LogTree.Utils (
-  splitLine,
-  pack,
-  isDay,
-  isMonth,
-  isYear,
-  isDate
-  ) where
+module LogTree.Utils where
 
 import qualified Data.Char as C
-import qualified Data.List as L
 import qualified Data.Text as T
 import qualified Data.Set as S
 
@@ -28,17 +20,36 @@ isMonthName :: T.Text -> Bool
 isMonthName t = S.member lowT triLetterMonths
   where lowT = T.toLower t
 
--- isSquare :: [[a]] -> Bool
--- isSquare [[]] = False
--- isSquare [[_]] = True
--- isSquare x = all (\ l -> l == length lengths) lengths
---   where lengths = fmap length x
+-- all permutations of 1,2,3
+data Permutation1to3 =
+  Perm123 | Perm213 |
+  Perm132 | Perm312 |
+  Perm231 | Perm321
+  deriving (Eq, Ord, Show)
 
-hasTrueRows :: [[Bool]] -> Bool
-hasTrueRows x = all id (fmap (any id) x)
+permutationsWithValueAtPosition :: Int -> Int -> S.Set Permutation1to3
+permutationsWithValueAtPosition val pos
+  | val == 1 && pos == 1 = S.fromList [Perm123, Perm132]
+  | val == 1 && pos == 2 = S.fromList [Perm213, Perm312]
+  | val == 1 && pos == 3 = S.fromList [Perm231, Perm321]
+  | val == 2 && pos == 1 = S.fromList [Perm213, Perm231]
+  | val == 2 && pos == 2 = S.fromList [Perm123, Perm321]
+  | val == 2 && pos == 3 = S.fromList [Perm132, Perm312]
+  | val == 3 && pos == 1 = S.fromList [Perm312, Perm321]
+  | val == 3 && pos == 2 = S.fromList [Perm132, Perm231]
+  | val == 3 && pos == 3 = S.fromList [Perm123, Perm213]
+  | otherwise = S.empty
 
-hasTrueColumns :: [[Bool]] -> Bool
-hasTrueColumns = hasTrueRows . L.transpose
+getDatePermutationsForPart :: (T.Text, Int) -> S.Set Permutation1to3
+getDatePermutationsForPart (text, pos) =
+  S.unions [permutationsWithValueAtPosition index pos
+           | (index, predicate) <- indexedPredicates, predicate text]
+  where
+    indexedPredicates = [(1, isDay), (2, isMonth), (3, isYear)]
+
+getDatePermutations :: [T.Text] -> S.Set Permutation1to3
+getDatePermutations parts =
+  foldr1 S.intersection $ fmap getDatePermutationsForPart $ zip parts [1, 2, 3]
 
 -- Public functions
 
@@ -59,7 +70,6 @@ isYear :: T.Text -> Bool
 isYear = isTwoOrFourDigits
 
 isDate :: T.Text -> Bool
-isDate t = (length parts == 3) && hasTrueRows kinds && hasTrueColumns kinds
+isDate t = (length parts == 3) && (not . S.null . getDatePermutations $ parts)
   where parts = T.split (\ x -> x == '-') t
-        kinds = [fmap x parts | x <- [isDay, isMonth, isYear]]
   
