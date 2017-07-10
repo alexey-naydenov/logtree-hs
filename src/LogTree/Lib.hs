@@ -11,6 +11,7 @@ mainFunction :: String -> IO ()
 mainFunction logPath = do
   wholeLog <- TIO.readFile logPath
   logLines <- return $ fmap U.convertLogEntryToPath $ T.lines wholeLog
-  -- TIO.putStrLn $ T.unlines $ fmap T.unwords logLines
-  print ""
-  print $ U.buildLogTreeNode T.empty logLines
+  print $
+    U.trimExcessChildren 20 $
+    U.mergeSingleChild $
+    U.buildLogTreeNode 6 T.empty logLines

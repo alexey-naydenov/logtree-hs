@@ -109,10 +109,27 @@ buildChildMap entries = foldl insertChild M.empty entries
   where insertChild m (name:subchild)= M.insertWith (++) name [subchild] m
         insertChild m [] = m
 
-buildLogTreeNode :: T.Text -> [[T.Text]] -> LogTree
-buildLogTreeNode name [] = LogTree {logTreeValue = name, logTreeChildren = []}
-buildLogTreeNode name paths =
-  LogTree {logTreeValue = name, logTreeChildren = children}
-  where children = [buildLogTreeNode n p | (n, p) <- M.assocs childrenMap]
+buildLogTreeNode :: Int -> T.Text -> [[T.Text]] -> LogTree
+buildLogTreeNode 0 name _ = LogTree {logTreeValue = name, logTreeChildren = []}
+buildLogTreeNode allowance name paths
+  | length paths < 2 = LogTree {logTreeValue = name, logTreeChildren = []}
+  | otherwise =
+    LogTree {logTreeValue = name, logTreeChildren = children}
+  where children = [buildLogTreeNode (allowance - 1)  n p
+                   | (n, p) <- M.assocs childrenMap]
         childrenMap = buildChildMap paths
         
+mergeSingleChild :: LogTree -> LogTree
+mergeSingleChild LogTree {logTreeValue = n, logTreeChildren = [c]} =
+  mergeSingleChild LogTree {logTreeValue = T.unwords [n ,(logTreeValue c)],
+                            logTreeChildren = logTreeChildren c}
+mergeSingleChild LogTree {logTreeValue = n, logTreeChildren = cs} =
+  LogTree {logTreeValue = n, logTreeChildren = fmap mergeSingleChild cs}
+
+trimExcessChildren :: Int -> LogTree -> LogTree
+trimExcessChildren count LogTree {logTreeValue = n, logTreeChildren = cs}
+  | length cs <= count =
+    LogTree {logTreeValue = n,
+              logTreeChildren = fmap (trimExcessChildren count) cs}
+  | otherwise = LogTree {logTreeValue = n, logTreeChildren = []}
+
