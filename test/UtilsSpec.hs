@@ -32,3 +32,12 @@ spec = describe "LogTreeUtilsTest" $ do
     it "malformed dates" $ do
       LTU.isDate (T.pack "apr-Apr-2015") `shouldBe` False
       LTU.isDate (T.pack "1001-10-2015") `shouldBe` False
+
+  describe "isTimeTest" $ do
+    it "valid time" $ do
+      LTU.isTime (T.pack "21:54:05") `shouldBe` True
+      LTU.isTime (T.pack "2:54:5") `shouldBe` True
+
+  -- describe "makePath" $ do
+  --   it "test samples" $ do
+  --     LTU.convertLogEntryToPath "error 25-Apr-2017 22:07:49 [bsgmpre01 5.255.246.245 run]   [G] {st, 32m 8.07s} [I] {import, AbuseDecayStat, 32m 5.06s} completing" `shouldBe` [T.pack ""]

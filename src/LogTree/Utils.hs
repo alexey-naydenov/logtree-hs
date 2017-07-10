@@ -1,8 +1,12 @@
 module LogTree.Utils where
 
+import LogTree.Data
+import LogTree.Constants
+
 import qualified Data.Char as C
 import qualified Data.Text as T
 import qualified Data.Set as S
+import qualified Data.Map.Strict as M
 
 isOneOrTwoDigits :: T.Text -> Bool
 isOneOrTwoDigits t =
@@ -10,7 +14,7 @@ isOneOrTwoDigits t =
 
 isTwoOrFourDigits :: T.Text -> Bool
 isTwoOrFourDigits t =
-  ((T.length t == 1) || (T.length t > 0)) && (T.all C.isDigit t) 
+  ((T.length t == 2) || (T.length t == 4)) && (T.all C.isDigit t) 
 
 triLetterMonths :: S.Set T.Text
 triLetterMonths = S.fromList $ pack ["jan", "feb", "mar", "apr", "may", "jun",
@@ -51,6 +55,10 @@ getDatePermutations :: [T.Text] -> S.Set Permutation1to3
 getDatePermutations parts =
   foldr1 S.intersection $ fmap getDatePermutationsForPart $ zip parts [1, 2, 3]
 
+isHourMinSec :: T.Text -> Bool
+isHourMinSec t = (length parts == 3) && (all isOneOrTwoDigits parts)
+  where parts = T.split (\ x -> x == ':') t
+
 -- Public functions
 
 pack :: [String] -> [T.Text]
@@ -59,6 +67,9 @@ pack = fmap T.pack
 splitLine :: Char -> String -> [T.Text]
 splitLine separator =
   filter (not . T.null) . T.split (\ x -> x == separator) . T.pack
+
+splitLogLine :: T.Text -> [T.Text]
+splitLogLine = filter (not . T.null) . T.split (\ x -> x == ' ' || x == '\t')
 
 isDay :: T.Text -> Bool
 isDay = isOneOrTwoDigits
@@ -72,4 +83,36 @@ isYear = isTwoOrFourDigits
 isDate :: T.Text -> Bool
 isDate t = (length parts == 3) && (not . S.null . getDatePermutations $ parts)
   where parts = T.split (\ x -> x == '-') t
-  
+
+isTime :: T.Text -> Bool
+isTime t = (isHourMinSec t)
+
+removeCruft :: [(T.Text -> Bool)] -> [T.Text] -> [T.Text]
+removeCruft preds parts = filter (\ p -> not $ any id (preds <*> pure p)) parts
+
+dropSymbolsAround :: [Char] -> T.Text -> T.Text
+dropSymbolsAround separators = T.dropAround (\x -> S.member x sepSet)
+  where sepSet = S.fromList separators
+
+-- convertLogEntryToPath :: String -> [T.Text]
+-- convertLogEntryToPath entry = fmap (dropSymbolsAround ",[]{}\"'")
+--   $ removeCruft [isTime, isDate] $ splitLine ' ' entry
+
+convertLogEntryToPath :: T.Text -> [T.Text]
+convertLogEntryToPath entry =
+  fmap (dropSymbolsAround ",[]{}\"'") $
+  removeCruft [isTime, isDate] $
+  splitLogLine entry
+
+buildChildMap :: [[T.Text]] -> (M.Map T.Text [[T.Text]])
+buildChildMap entries = foldl insertChild M.empty entries
+  where insertChild m (name:subchild)= M.insertWith (++) name [subchild] m
+        insertChild m [] = m
+
+buildLogTreeNode :: T.Text -> [[T.Text]] -> LogTree
+buildLogTreeNode name [] = LogTree {logTreeValue = name, logTreeChildren = []}
+buildLogTreeNode name paths =
+  LogTree {logTreeValue = name, logTreeChildren = children}
+  where children = [buildLogTreeNode n p | (n, p) <- M.assocs childrenMap]
+        childrenMap = buildChildMap paths
+        

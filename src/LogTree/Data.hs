@@ -2,4 +2,9 @@ module LogTree.Data where
 
 import qualified Data.Text as T
 
-data LogTree = LogTree [T.Text] deriving (Show, Eq)
+data LogTree = LogTree {
+  logTreeValue :: T.Text,
+  logTreeChildren :: [LogTree]
+  } deriving (Eq, Show)
+
+

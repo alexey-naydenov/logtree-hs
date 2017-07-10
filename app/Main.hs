@@ -3,4 +3,4 @@ module Main where
 import qualified LogTree.Lib as LTL
 
 main :: IO ()
-main = LTL.someFunc
+main = LTL.mainFunction "/home/leha/tmp/work/test.log"
